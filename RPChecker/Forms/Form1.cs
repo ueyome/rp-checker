@@ -678,8 +678,8 @@ namespace RPChecker.Forms
             var (src, opt) = item;
             try
             {
-                File.Delete($"{src}.lwi");
-                File.Delete($"{opt}.lwi");
+                // File.Delete($"{src}.lwi");
+                // File.Delete($"{opt}.lwi");
                 File.Delete($"{opt}.vpy");
             }
             catch (Exception ex)
