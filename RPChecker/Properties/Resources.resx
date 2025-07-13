@@ -129,9 +129,20 @@ from vapoursynth import core
 # Load source &amp; ripped files.
 srcpath = r"%File1%"
 rippath = r"%File2%"
-src = core.lsmas.LWLibavSource(srcpath)
-rip = core.lsmas.LWLibavSource(rippath)
+src = core.ffms2.Source(srcpath)
+rip = core.ffms2.Source(rippath)
 assert rip.format.color_family in [vs.YUV, vs.GRAY], "only support YUV or Gray input"
+
+def ivtcto(clip):
+    fps_value = float(clip.fps)
+    fb_value = clip.get_frame(0).props['_FieldBased']
+    if fb_value > 0 and fps_value > 25.0:
+        order = fb_value - 1
+        clip = core.vivtc.VFM(clip, order=order, field=2)
+        clip = core.tivtc.TDecimate(clip, mode=1)
+    return clip
+src = ivtcto(src)
+rip = ivtcto(rip)
 
 def force8bit(clip):
     if clip.format.bits_per_sample == 8:
