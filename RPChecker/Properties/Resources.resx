@@ -129,25 +129,29 @@ from vapoursynth import core
 # Load source &amp; ripped files.
 srcpath = r"%File1%"
 rippath = r"%File2%"
+# src = core.lsmas.LWLibavSource(srcpath)
+# rip = core.lsmas.LWLibavSource(rippath)
 src = core.ffms2.Source(srcpath)
 rip = core.ffms2.Source(rippath)
+# src = core.bs.VideoSource(srcpath, cachemode=3)
+# rip = core.bs.VideoSource(rippath, cachemode=3)
 assert rip.format.color_family in [vs.YUV, vs.GRAY], "only support YUV or Gray input"
 
-def ivtcto(clip):
+def ivtc(clip):
     fps_value = float(clip.fps)
     fb_value = clip.get_frame(0).props['_FieldBased']
     if fb_value > 0 and fps_value > 25.0:
         order = fb_value - 1
         clip = core.vivtc.VFM(clip, order=order, field=2)
-        clip = core.tivtc.TDecimate(clip, mode=1)
+        clip = core.vivtc.VDecimate(clip)
     return clip
-src = ivtcto(src)
-rip = ivtcto(rip)
+src = ivtc(src)
+rip = ivtc(rip)
 
 def force8bit(clip):
     if clip.format.bits_per_sample == 8:
         return clip
-    return clip.resize.Spline64(format=clip.format.replace(bits_per_sample=8).id, dither_type='none')
+    return core.vszip.Dither(clip, bitdepth=8, dither_type=0)
 src = force8bit(src)
 rip = force8bit(rip)
 
@@ -155,18 +159,33 @@ rip = force8bit(rip)
 if src.width != rip.width or src.height != rip.height:
     src = src.resize.Bicubic(rip.width, rip.height)
 
-src_planes = [ src.std.ShufflePlanes(i, vs.GRAY) for i in range(src.format.num_planes) ]
-rip_planes = [ rip.std.ShufflePlanes(i, vs.GRAY) for i in range(rip.format.num_planes) ]
+# src_planes = [ src.std.ShufflePlanes(i, vs.GRAY) for i in range(src.format.num_planes) ]
+# rip_planes = [ rip.std.ShufflePlanes(i, vs.GRAY) for i in range(rip.format.num_planes) ]
 
-# runtime function to print psnr value to console.
+# # runtime function to print psnr value to console.
+# def callback(n, f):
+#     print("RPCOUT:", n, ' '.join([ str(p.props.PlanePSNR) for p in f ]), flush=True, file=sys.stdout)
+#     return rip
+
+# # Compare.
+# cmp_planes = [ core.complane.PSNR(a, b) for (a, b) in zip(rip_planes, src_planes) ]
+# cmp = core.std.FrameEval(rip, callback, prop_src=cmp_planes)
+# cmp.set_output()
+
+import math
 def callback(n, f):
-    print("RPCOUT:", n, ' '.join([ str(p.props.PlanePSNR) for p in f ]), flush=True, file=sys.stdout)
+    Y = f.props.XPSNR_Y
+    U = f.props.XPSNR_U
+    V = f.props.XPSNR_V
+    Y = 100.0 if math.isinf(Y) else Y
+    U = 100.0 if math.isinf(U) else U
+    V = 100.0 if math.isinf(V) else V
+    print("RPCOUT:", n, Y, U, V, flush=True, file=sys.stdout)
     return rip
 
-# Compare.
-cmp_planes = [ core.complane.PSNR(a, b) for (a, b) in zip(rip_planes, src_planes) ]
-cmp = core.std.FrameEval(rip, callback, prop_src=cmp_planes)
-cmp.set_output()</value>
+cmp = core.vszip.XPSNR(src, rip, temporal=False, verbose=False)
+res = core.std.FrameEval(rip, callback, prop_src=cmp)
+res.set_output()</value>
     <comment>计算PSNR的vpy模板</comment>
   </data>
   <data name="GMSD" xml:space="preserve">
@@ -178,25 +197,29 @@ import muvsfunc as muf
 # Load source &amp; ripped files.
 srcpath = r"%File1%"
 rippath = r"%File2%"
+# src = core.lsmas.LWLibavSource(srcpath)
+# rip = core.lsmas.LWLibavSource(rippath)
 src = core.ffms2.Source(srcpath)
 rip = core.ffms2.Source(rippath)
+# src = core.bs.VideoSource(srcpath, cachemode=3)
+# rip = core.bs.VideoSource(rippath, cachemode=3)
 assert rip.format.color_family in [vs.YUV, vs.GRAY], "only support YUV or Gray input"
 
-def ivtcto(clip):
+def ivtc(clip):
     fps_value = float(clip.fps)
     fb_value = clip.get_frame(0).props['_FieldBased']
     if fb_value > 0 and fps_value > 25.0:
         order = fb_value - 1
         clip = core.vivtc.VFM(clip, order=order, field=2)
-        clip = core.tivtc.TDecimate(clip, mode=1)
+        clip = core.vivtc.VDecimate(clip)
     return clip
-src = ivtcto(src)
-rip = ivtcto(rip)
+src = ivtc(src)
+rip = ivtc(rip)
 
 def force8bit(clip):
     if clip.format.bits_per_sample == 8:
         return clip
-    return clip.resize.Spline64(format=clip.format.replace(bits_per_sample=8).id, dither_type='none')
+    return core.vszip.Dither(clip, bitdepth=8, dither_type=0)
 src = force8bit(src)
 rip = force8bit(rip)
 
